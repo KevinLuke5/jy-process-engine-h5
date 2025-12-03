@@ -1,0 +1,34 @@
+stages:
+  - sonar_check
+  - sonar_push
+
+variables:
+  PROJECT_NAME: "frontend_jy-process-engine-h5" # 项目名
+  PROJECT_ID: "AZEhLkhi8Nl20YTBe_bK" # 项目ID
+  PROJECT_JDK: "0"
+  CHECK_BRANCH: "main" # 需要扫描的分支
+
+sonarqube-check:
+  stage: sonar_check
+  image:
+    name: sonarsource/sonar-scanner-cli:latest
+    entrypoint: [ "" ]
+  variables:
+    SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"  # Defines the location of the analysis task cache
+    GIT_DEPTH: "0"  # Tells git to fetch all the branches of the project, required by the analysis task
+  cache:
+    key: "${CI_JOB_NAME}"
+    paths:
+      - .sonar/cache
+  script:
+    - sonar-scanner -Dsonar.projectKey=${PROJECT_NAME}_${PROJECT_ID} -Dsonar.host.url=https://sonarqube.joyoung.com -Dsonar.login=d8ae37e1324eb63801bc8f6afd1f41e67d151d1e
+  allow_failure: true
+  rules:
+    - if: $CI_COMMIT_REF_NAME == $CHECK_BRANCH
+
+sonarqube-push:
+  stage: sonar_push
+  script:
+    - python3 /home/gitlab-runner/sonar_push/sonar_push.py ${PROJECT_NAME} ${PROJECT_ID} ${PROJECT_JDK} ${CI_COMMIT_AUTHOR} ${CI_PROJECT_NAME} ${CI_COMMIT_REF_NAME} ${CI_COMMIT_TIMESTAMP}
+  rules:
+    - if: $CI_COMMIT_REF_NAME == $CHECK_BRANCH
